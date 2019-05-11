@@ -20,5 +20,6 @@ int main() {
   printf("removed from list twice\n");
   printf("list size: %d\n",len_list(list));
   print_list(list);
+  delete_list(list);
   return 0;
 }
