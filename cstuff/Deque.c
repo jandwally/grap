@@ -124,7 +124,7 @@ void print_deque(Deque *d) {
     return;
   }
   while (n != NULL) {
-    printf("<[%d]>", n -> val);
+    printf("<-[%d]->", n -> val);
     n = n -> next;
   }
   printf("()\n");
