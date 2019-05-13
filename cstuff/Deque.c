@@ -2,15 +2,16 @@
 #include <stdio.h>
 
 typedef struct DNode {
-  int val;
-  struct DNode *prev;
-  struct DNode *next;
+  void *val;            // pointer to data of some unknown type
+  size_t sz;            // size of the data val is pointing to
+  struct DNode *prev;   // previous node
+  struct DNode *next;   // next node
 } DNode;
 
 typedef struct {
-  DNode *head;
-  DNode *tail;
-  int len;
+  DNode *head;          // head of the deque
+  DNode *tail;          // tail of the deque
+  int len;              // number of nodes in deque
 } Deque;
 
 // Deque constructor
@@ -29,10 +30,14 @@ int len_deque(Deque *d) {
 }
 
 // insert head node with value val if possible, -1 if error
-int addh_deque(Deque *d, int val) {
-  if (d == NULL) return -1;
+int addh_deque(Deque *d, void *val, size_t sz) {
+  if (d == NULL || val == NULL) return -1;
   DNode *n = malloc(sizeof(DNode));
-  n -> val = val;
+  n -> sz = sz;
+  n -> val = malloc(sz);
+  for (int i = 0; i < sz; i++) {
+    *(char *)(n -> val + i) = *(char *)(val + i); //copying val's bytes into node val
+  }
   n -> prev = NULL;
   n -> next = d -> head;
   d -> head = n;
@@ -46,10 +51,14 @@ int addh_deque(Deque *d, int val) {
 }
 
 // insert tail node with value val if possible, -1 if error
-int addt_deque(Deque *d, int val) {
+int addt_deque(Deque *d, void *val, size_t sz) {
   if (d == NULL) return -1;
   DNode *n = malloc(sizeof(DNode));
-  n -> val = val;
+  n -> sz = sz;
+  n -> val = malloc(sz);
+  for (int i = 0; i < sz; i++) {
+    *(char *)(n -> val + i) = *(char *)(val + i); //copying val's bytes into node val
+  }
   n -> prev = d -> tail;
   n -> next = NULL;
   d -> tail = n;
@@ -72,6 +81,7 @@ int remh_deque(Deque *d) {
   } else {
     d -> head -> prev = NULL;
   }
+  free(n -> val);
   free(n);
   d -> len--;
   return 0;
@@ -87,21 +97,30 @@ int remt_deque(Deque *d) {
   } else {
     d -> tail -> next = NULL;
   }
+  free(n -> val);
   free(n);
   d -> len--;
   return 0;
 }
 
-// get the value of the head, 0 if impossible
-int geth_deque(Deque *d) {
-  if (d == NULL || d -> head == NULL) return 0;
-  return d -> head -> val;
+// returns a pointer to a copy of the data at head, NULL otherwise
+void *geth_deque(Deque *d) {
+  if (d == NULL || d -> head == NULL) return NULL;
+  void *val = malloc(d -> head -> sz);  // (!) user will be responsibe for freeing this (!)
+  for (int i = 0; i < d -> head -> sz; i++) {
+    *(char *)(val + i) = *(char *)(d -> head -> val + i);
+  }
+  return val;
 }
 
-// get the value of the tail, 0 if impossible
-int gett_deque(Deque *d) {
-  if (d == NULL || d -> tail == NULL) return 0;
-  return d -> tail -> val;
+// returns a pointer to a copy of the data at tail, NULL otherwise
+void *gett_deque(Deque *d) {
+  if (d == NULL || d -> tail == NULL) return NULL;
+  void *val = malloc(d -> tail -> sz);  // (!) user will be responsibe for freeing this (!)
+  for (int i = 0; i < d -> tail -> sz; i++) {
+    *(char *)(val + i) = *(char *)(d -> tail -> val + i);
+  }
+  return val;
 }
 
 // delete all elements of Deque and free, -1 if impossible
@@ -114,8 +133,19 @@ int delete_deque(Deque *d) {
   return 0;
 }
 
+// returns 1 if there's a node for which function evalutes to true, 0 if not
+int find_deque(Deque *d, int (*fptr)(void *)) {
+  if (d == NULL) return 0;
+  DNode *n = d -> head;
+  while (n != NULL) {
+    if ((*fptr)(n -> val)) return 1;
+    n = n -> next;
+  }
+  return 0;
+}
+
 // utility function for printing
-void print_deque(Deque *d) {
+void print_deque(Deque *d, void (*fptr)(void *)) {
   if (d == NULL) return;
   DNode *n = d -> head;
   printf("()");
@@ -124,27 +154,33 @@ void print_deque(Deque *d) {
     return;
   }
   while (n != NULL) {
-    printf("<-[%d]->", n -> val);
+    printf("<-[");
+    (*fptr)(n -> val);
+    printf("]->");
     n = n -> next;
   }
   printf("()\n");
 }
 
-void fwprint_deque(Deque *d) {
+void fwprint_deque(Deque *d, void (*fptr)(void *)) {
   if (d == NULL) return;
   DNode *n = d -> head;
   while (n != NULL) {
-    printf("[%d]->", n -> val);
+    printf("[");
+    (*fptr)(n -> val);
+    printf("]->");
     n = n -> next;
   }
   printf("()\n");
 }
 
-void bkprint_deque(Deque *d) {
+void bkprint_deque(Deque *d, void (*fptr)(void *)) {
   if (d == NULL) return;
   DNode *n = d -> tail;
   while (n != NULL) {
-    printf("[%d]->", n -> val);
+    printf("[");
+    (*fptr)(n -> val);
+    printf("]->");
     n = n -> prev;
   }
   printf("()\n");
