@@ -1,23 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include "Deque.h"
 
-typedef struct DNode {
-  void *val;            // pointer to data of some unknown type
-  size_t sz;            // size of the data val is pointing to
-  struct DNode *prev;   // previous node
-  struct DNode *next;   // next node
-} DNode;
-
-typedef struct {
-  DNode *head;          // head of the deque
-  DNode *tail;          // tail of the deque
-  int len;              // number of nodes in deque
-} Deque;
-
-// Deque constructor
-Deque *make_deque() {
+// Deque constructor, input is promised size of data types to be in deque and equality fn
+Deque *make_deque(size_t sz, comparison f) {
   Deque *d = malloc(sizeof(Deque));
+  d -> sz = sz;
   d -> len = 0;
+  d -> eql = f;
   d -> tail = NULL;
   d -> head = NULL;
   return d;
@@ -30,12 +20,11 @@ int len_deque(Deque *d) {
 }
 
 // insert head node with value val if possible, -1 if error
-int addh_deque(Deque *d, void *val, size_t sz) {
+int addh_deque(Deque *d, void *val) {
   if (d == NULL || val == NULL) return -1;
   DNode *n = malloc(sizeof(DNode));
-  n -> sz = sz;
-  n -> val = malloc(sz);
-  for (int i = 0; i < sz; i++) {
+  n -> val = malloc(d -> sz);
+  for (int i = 0; i < d -> sz; i++) {
     *(char *)(n -> val + i) = *(char *)(val + i); //copying val's bytes into node val
   }
   n -> prev = NULL;
@@ -51,12 +40,11 @@ int addh_deque(Deque *d, void *val, size_t sz) {
 }
 
 // insert tail node with value val if possible, -1 if error
-int addt_deque(Deque *d, void *val, size_t sz) {
+int addt_deque(Deque *d, void *val) {
   if (d == NULL) return -1;
   DNode *n = malloc(sizeof(DNode));
-  n -> sz = sz;
-  n -> val = malloc(sz);
-  for (int i = 0; i < sz; i++) {
+  n -> val = malloc(d -> sz);
+  for (int i = 0; i < d -> sz; i++) {
     *(char *)(n -> val + i) = *(char *)(val + i); //copying val's bytes into node val
   }
   n -> prev = d -> tail;
@@ -106,8 +94,8 @@ int remt_deque(Deque *d) {
 // returns a pointer to a copy of the data at head, NULL otherwise
 void *geth_deque(Deque *d) {
   if (d == NULL || d -> head == NULL) return NULL;
-  void *val = malloc(d -> head -> sz);  // (!) user will be responsibe for freeing this (!)
-  for (int i = 0; i < d -> head -> sz; i++) {
+  void *val = malloc(d -> sz);  // (!) user will be responsibe for freeing this (!)
+  for (int i = 0; i < d -> sz; i++) {
     *(char *)(val + i) = *(char *)(d -> head -> val + i);
   }
   return val;
@@ -116,8 +104,8 @@ void *geth_deque(Deque *d) {
 // returns a pointer to a copy of the data at tail, NULL otherwise
 void *gett_deque(Deque *d) {
   if (d == NULL || d -> tail == NULL) return NULL;
-  void *val = malloc(d -> tail -> sz);  // (!) user will be responsibe for freeing this (!)
-  for (int i = 0; i < d -> tail -> sz; i++) {
+  void *val = malloc(d -> sz);  // (!) user will be responsibe for freeing this (!)
+  for (int i = 0; i < d -> sz; i++) {
     *(char *)(val + i) = *(char *)(d -> tail -> val + i);
   }
   return val;
@@ -133,15 +121,41 @@ int delete_deque(Deque *d) {
   return 0;
 }
 
-// returns 1 if there's a node for which function evalutes to true, 0 if not
-int find_deque(Deque *d, int (*fptr)(void *)) {
+/* returns 1 if there's a node for which function evalutes to true when 
+   applied to it and b, 0 otherwise */
+int find_deque(Deque *d, comparison f, void *b) {
   if (d == NULL) return 0;
   DNode *n = d -> head;
   while (n != NULL) {
-    if ((*fptr)(n -> val)) return 1;
+    if (f(n -> val,b)) return 1;
     n = n -> next;
   }
   return 0;
+}
+
+// checks "structural equality" of *a and *val (assumes a same type as vals in d)
+// (!) will segfault if size of *a is greater than sz (!)
+// works if *a is a basic type or a struct of basic types
+// not in the h file as this is the default equality if given eql is NULL
+int struct_cont(Deque *d, void *a) {
+  if (d == NULL) return 0;
+  DNode *n = d -> head;
+  while (n != NULL) {
+    int bl = 1;
+    for (int i = 0; i < d -> sz && bl; i++) {
+      bl = bl && (*(char *)(n -> val + i) == *(char *)(a + i));
+    }
+    if (bl) return 1;
+    n = n -> next;
+  }
+  return 0;
+}
+
+// does the deque contain a value equal to a, uses structural equality by default
+int cont_deque(Deque *d, void *a) {
+  if (d == NULL) return 0;
+  if (d -> eql == NULL) return struct_cont(d, a);
+  return find_deque(d, d -> eql, a);
 }
 
 // utility function for printing
